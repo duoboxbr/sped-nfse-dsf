@@ -35,7 +35,7 @@ class Rps implements RpsInterface
      * @var string
      */
     protected $jsonschema;
-    
+
     protected $assinatura;
 
 
@@ -47,7 +47,7 @@ class Rps implements RpsInterface
     {
         $this->init($rps);
     }
-    
+
     /**
      * Convert Rps::class data in XML
      * @param Certificate $certificate
@@ -58,7 +58,7 @@ class Rps implements RpsInterface
         $fac = new Factory($this->std);
         return $fac->render($certificate);
     }
-    
+
     /**
      * Inicialize properties and valid input
      * @param stdClass $rps
@@ -66,10 +66,10 @@ class Rps implements RpsInterface
     private function init(stdClass $rps)
     {
         $this->std = $this->propertiesToLower($rps);
-        $this->jsonschema = \Safe\realpath("../storage/jsonSchemes/rps.schema");
+        $this->jsonschema = \Safe\realpath(__DIR__."/../storage/jsonSchemes/rps.schema");
         $this->validInputData($this->std);
     }
-    
+
     /**
      * Change properties names of stdClass to lower case
      * @param stdClass $data
