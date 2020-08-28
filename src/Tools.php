@@ -24,9 +24,9 @@ use DateTime;
 
 class Tools extends BaseTools
 {
-       
+
     protected $xsdpath;
-    
+
     /**
      * Construtor
      * @param string $config
@@ -38,7 +38,7 @@ class Tools extends BaseTools
         $path = \Safe\realpath(__DIR__ . '/../storage/schemes');
         $this->xsdpath = $path;
     }
-    
+
     /**
      * Cancela Nota
      * @param string $numero
@@ -70,15 +70,15 @@ class Tools extends BaseTools
             . "</Nota>"
             . "</Lote>"
             . "</ns1:ReqCancelamentoNFSe>";
-        
+
         if ($this->wsobj->sign->$operation) {
             $content = $this->sign($content, 'Lote', 'Id');
         }
         Validator::isValid($content, $this->xsdpath."/ReqCancelamentoNFSe.xsd");
-        
+
         return $this->send($content, $operation);
     }
-    
+
     /**
      * Consulta notas pelos seus numeros ou pelos numeros de RPS
      * @param array $notas
@@ -102,7 +102,7 @@ class Tools extends BaseTools
             . "<Versao>{$this->wsobj->version}</Versao>"
             . "</Cabecalho>"
             . "<Lote Id=\"$lote\">";
-        
+
         if (!empty($notas)) {
             $content .= "<NotaConsulta>";
             foreach ($notas as $nota) {
@@ -115,7 +115,7 @@ class Tools extends BaseTools
             }
             $content .= "</NotaConsulta>";
         }
-            
+
         if (!empty($rps)) {
             $content .= "<RPSConsulta>";
             foreach ($rps as $rp) {
@@ -130,14 +130,14 @@ class Tools extends BaseTools
         }
         $content .= "</Lote>"
             . "</ns1:ReqConsultaNFSeRPS>";
-     
+
         if ($this->wsobj->sign->$operation) {
             $content = $this->sign($content, 'Lote', 'Id');
         }
         Validator::isValid($content, $this->xsdpath."/ReqConsultaNFSeRPS.xsd");
         return $this->send($content, $operation);
     }
-    
+
     /**
      * Consulta último número sequencial de RPS
      * @return string
@@ -158,11 +158,11 @@ class Tools extends BaseTools
             . "<Versao>{$this->wsobj->version}</Versao>"
             . "</Cabecalho>"
             . "</ns1:ConsultaSeqRps>";
-        
+
         Validator::isValid($content, $this->xsdpath."/ConsultaSeqRps.xsd");
         return $this->send($content, $operation);
     }
-    
+
     /**
      * Consulta Notas pelo numero do lote
      * @param string $lote
@@ -184,11 +184,11 @@ class Tools extends BaseTools
             . "<NumeroLote>$lote</NumeroLote>"
             . "</Cabecalho>"
             . "</ns1:ReqConsultaLote>";
-        
+
         Validator::isValid($content, $this->xsdpath."/ReqConsultaLote.xsd");
         return $this->send($content, $operation);
     }
-    
+
     /**
      * Consulta Notas no intervalo das datas
      * @param string $dtInicial
@@ -221,14 +221,14 @@ class Tools extends BaseTools
         Validator::isValid($content, $this->xsdpath."/ReqConsultaNotas.xsd");
         return $this->send($content, $operation);
     }
-    
+
     /**
      * Envia RSP em modo assincrono
      * @param array $arps
      * @param string $lote
      * @return string
      */
-    public function enviar(array $arps, $lote): string
+    public function enviar(array $arps, $lote, $retornoXml = false): string
     {
         $operation = "enviar";
         $std = new \stdClass();
@@ -258,21 +258,21 @@ class Tools extends BaseTools
             . "<MetodoEnvio>WS</MetodoEnvio>"
             . "</Cabecalho>"
             . "<Lote Id=\"$lote\">";
-        
+
         foreach ($rpsxmls as $xml) {
             $content .= $xml;
         }
-        
+
         $content .= "</Lote>"
             . "</ns1:ReqEnvioLoteRPS>";
-        
+
         if ($this->wsobj->sign->$operation) {
             $content = $this->sign($content, 'Lote', 'Id');
         }
         Validator::isValid($content, $this->xsdpath."/ReqEnvioLoteRPS.xsd");
-        return $this->send($content, $operation);
+        return ( $retornoXml ) ? $content : $this->send($content, $operation);
     }
-    
+
     /**
      * Envia RPS em modo sincrono
      * @param array $arps
@@ -282,7 +282,7 @@ class Tools extends BaseTools
     public function enviarSincrono(array $arps, $lote): string
     {
         $operation = "enviarSincrono";
-        
+
         $std = new \stdClass();
         $std->dtInicial = '';
         $std->dtFinal = '';
@@ -291,7 +291,7 @@ class Tools extends BaseTools
         $std->vTotDeduc = 0;
 
         $rpsxmls = $this->buildRpsXml($arps, $std);
-        
+
         $content = "<ns1:ReqEnvioLoteRPS "
             . "xmlns:ns1=\"http://localhost:8080/WsNFe2/lote\" "
             . "xmlns:tipos=\"http://localhost:8080/WsNFe2/tp\" "
@@ -312,21 +312,21 @@ class Tools extends BaseTools
             . "<MetodoEnvio>WS</MetodoEnvio>"
             . "</Cabecalho>"
             . "<Lote Id=\"lote:$lote\">";
-        
+
         foreach ($rpsxmls as $xml) {
             $content .= $xml;
         }
         $content .= "</Lote>"
             . "</ns1:ReqEnvioLoteRPS>";
-        
-        
+
+
         if ($this->wsobj->sign->$operation) {
             $content = $this->sign($content, 'Lote', 'Id');
         }
         Validator::isValid($content, $this->xsdpath."/ReqEnvioLoteRPS.xsd");
         return $this->send($content, $operation);
     }
-    
+
     /**
      * Constroi os RPS em XML e retorna em um array
      * os valores e datas dos RPS são retornados em
@@ -371,9 +371,11 @@ class Tools extends BaseTools
         }
         $std->dtInicial = $dtIni->format('Y-m-d');
         $std->dtFinal = $dtFim->format('Y-m-d');
+        $std->vTotDeduc = number_format($std->vTotDeduc,2,'.','');
+        $std->vTotServ = number_format($std->vTotServ,2,'.','');
         return $rpsxmls;
     }
-    
+
     /**
      * Verifica qual é a maior data entre as passadas como parâmetro
      * @param \Datetime $dt1
@@ -388,7 +390,7 @@ class Tools extends BaseTools
             return $dt2;
         }
     }
-    
+
     /**
      * Verifica qual é a menor data entre as passadas como parâmetro
      * @param \Datetime $dt1
